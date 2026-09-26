@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcript Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 350px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .sidebar h2 { margin-top: 0; font-size: 18px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit;
+        }
+        .form-group textarea { resize: vertical; height: 60px; }
+        .buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn {
+            flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;
+        }
+        .btn-png { background-color: #3b82f6; }
+        .btn-jpg { background-color: #10b981; }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        /* TRANSCRIPT STYLES - A4 Proportions */
+        .transcript-container {
+             /* A4 Aspect Ratio container */
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            /* Standard A4 pixel size at 96 DPI is 794x1123, scaling up slightly for better resolution */
+            width: 900px; 
+            min-height: 1273px;
+        }
+
+        .transcript-page {
+            width: 100%;
+            height: 100%;
+            padding: 50px;
+            box-sizing: border-box;
+            font-size: 14px;
+            color: #000;
+            position: relative;
+            background-color: #fff;
+        }
+
+        .page-num { position: absolute; top: 40px; right: 50px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header img { max-width: 300px; max-height: 120px; object-fit: contain; }
+        .header h1 { font-size: 18px; margin: 15px 0 0 0; font-weight: bold; }
+        
+        .info-section { display: flex; justify-content: space-between; margin-bottom: 25px; }
+        .school-address-box { width: 45%; white-space: pre-wrap; margin-top: 25px; }
+        .student-info-box { width: 45%; }
+        
+        .info-grid { display: grid; grid-template-columns: 120px 1fr; gap: 8px; margin-bottom: 0; }
+        .info-grid div:nth-child(odd) { font-weight: bold; }
+        
+        .center-title { text-align: center; font-weight: bold; margin: 30px 0; font-size: 15px;}
+        .semester-term { text-align: center; font-weight: bold; margin-bottom: 25px; display: inline-block; }
+        .semester-term-container { text-align: center; margin-bottom: 25px; }
+        
+        .static-details { display: grid; grid-template-columns: 100px 1fr; gap: 5px; margin-bottom: 30px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
+        th, td { text-align: left; padding: 6px; vertical-align: top; }
+        th { font-weight: normal; border-bottom: 1px solid #000; padding-bottom: 10px; }
+        
+        .totals-table { margin-top: 30px; }
+        .totals-table th { border-bottom: none; text-decoration: underline; }
+        
+        .footer { text-align: center; margin-top: 80px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Fill Details</h2>
+        
+        <div class="form-group">
+            <label>Logo (Image)</label>
+            <input type="file" id="logoInput" accept="image/*">
+        </div>
+        <div class="form-group">
+            <label>School Name & Title</label>
+            <input type="text" id="schoolTitleInput" value="Mercer County Community College - Unofficial Transcript">
+        </div>
+        <div class="form-group">
+            <label>School Address</label>
+            <textarea id="schoolAddressInput">Mercer county community college&#10;1200 Old Trenton Rd,&#10;West Windsor Township NJ 08550</textarea>
+        </div>
+        <div class="form-group">
+            <label>Student Name</label>
+            <input type="text" id="nameInput" value="Chant Yelder">
+        </div>
+        <div class="form-group">
+            <label>Student ID</label>
+            <input type="text" id="idInput" value="0456544">
+        </div>
+        <div class="form-group">
+            <label>Student Email</label>
+            <input type="text" id="mailInput" value="chant.yelder@students.mccc.edu">
+        </div>
+        <div class="form-group">
+            <label>Birthdate</label>
+            <input type="text" id="birthInput" value="10/21/****">
+        </div>
+        <div class="form-group">
+            <label>Student Address</label>
+            <textarea id="studentAddressInput">3015 Berry Street&#10;Colorado Springs, Colorado 80920</textarea>
+        </div>
+        <div class="form-group">
+            <label>Print Date</label>
+            <input type="text" id="printDateInput" value="09/02/2026">
+        </div>
+        <div class="form-group">
+            <label>Semester Term</label>
+            <textarea id="termInput">Semester Term&#10;2026 Fall</textarea>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-png" onclick="downloadPNG()">Download PNG</button>
+            <button class="btn btn-jpg" onclick="downloadJPG()">Download JPEG</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="transcript-container" id="transcript">
+            <div class="transcript-page">
+                <div class="page-num">Page 1 of 1</div>
+                
+                <div class="header">
+                    <img id="logoPreview" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Logo" style="display: none;">
+                    <h1 id="schoolTitleText" style="white-space: nowrap;">Mercer County Community College - Unofficial Transcript</h1>
+                </div>
+
+                <div class="info-section">
+                    <div class="school-address-box" id="schoolAddressText">Mercer county community college<br>1200 Old Trenton Rd,<br>West Windsor Township NJ 08550</div>
+                    <div class="student-info-box">
+                        <div class="info-grid">
+                            <div>Name:</div> <div id="nameText" style="white-space: nowrap;">Chant Yelder</div>
+                            <div>Student ID:</div> <div id="idText">0456544</div>
+                        </div>
+                        <div style="margin-top: 8px; font-weight: bold;">
+                            Student mail:<br>
+                            <div id="mailText" style="font-weight: normal; margin-top: 4px; word-wrap: break-word;">chant.yelder@students.mccc.edu</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div></div> <!-- Empty div for spacing -->
+                    <div class="student-info-box">
+                         <div class="info-grid">
+                            <div>Birthdate:</div> <div id="birthText">10/21/****</div>
+                            <div>Student Address:</div> <div id="studentAddressText" style="white-space: pre-wrap;">3015 Berry Street<br>Colorado Springs, Colorado 80920</div>
+                            <div>Print Date:</div> <div id="printDateText">09/02/2026</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="center-title">Beginning of Undergraduate Record</div>
+                
+                <div class="semester-term-container">
+                    <div class="semester-term" id="termText" style="white-space: pre-wrap;">Semester Term<br>2026 Fall</div>
+                </div>
+
+                <div class="static-details">
+                    <div>Program:</div> <div>Undergraduate Non Degree Seeking</div>
+                    <div>Plan:</div> <div>Not Degree Seeking Undergraduate Not Applicable</div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%">Course</th>
+                            <th style="width: 45%">Description</th>
+                            <th style="width: 10%">Attempted</th>
+                            <th style="width: 10%">Earned</th>
+                            <th style="width: 10%">Grade</th>
+                            <th style="width: 10%">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>BMGT 121A</td>
+                            <td>Solve Problems Make Decisions</td>
+                            <td>1.000</td>
+                            <td>0.000</td>
+                            <td></td>
+                            <td>0.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="totals-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%"></th>
+                            <th style="width: 25%"></th>
+                            <th style="width: 12.5%">Attempted</th>
+                            <th style="width: 12.5%">Earned</th>
+                            <th style="width: 12.5%">GPA Units</th>
+                            <th style="width: 12.5%">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Term GPA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.000</td>
+                            <td>Term Totals</td>
+                            <td>1.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                        </tr>
+                        <tr><td colspan="6"><br></td></tr>
+                        <tr>
+                            <td>Cum GPA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.000</td>
+                            <td>Cum Totals</td>
+                            <td>1.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                        </tr>
+                        <tr>
+                            <td>Transfer Cum<br>GPA</td>
+                            <td>Transfer Totals</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                        </tr>
+                        <tr>
+                            <td>Combined Cum<br>GPA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.000</td>
+                            <td>Comb Totals</td>
+                            <td>1.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                            <td>0.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="footer">End of Undergraduate Record</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update variables from form to preview
+        function bindInputToText(inputId, textId, isMultiline = false) {
+            const input = document.getElementById(inputId);
+            const text = document.getElementById(textId);
+            input.addEventListener('input', function() {
+                if(isMultiline) {
+                    text.innerHTML = this.value.replace(/\n/g, '<br>');
+                } else {
+                    text.textContent = this.value;
+                }
+            });
+        }
+
+        bindInputToText('schoolTitleInput', 'schoolTitleText');
+        bindInputToText('schoolAddressInput', 'schoolAddressText', true);
+        bindInputToText('nameInput', 'nameText');
+        bindInputToText('idInput', 'idText');
+        bindInputToText('mailInput', 'mailText');
+        bindInputToText('birthInput', 'birthText');
+        bindInputToText('studentAddressInput', 'studentAddressText', true);
+        bindInputToText('printDateInput', 'printDateText');
+        bindInputToText('termInput', 'termText', true);
+
+        // Handle Logo Upload
+        document.getElementById('logoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = document.getElementById('logoPreview');
+                    img.src = event.target.result;
+                    img.style.display = 'inline-block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Setup html2canvas options for better quality
+        const getCanvasOptions = () => ({
+            scale: 2, // High resolution
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        });
+
+        // Download as PNG
+        function downloadPNG() {
+            const transcript = document.getElementById('transcript');
+            html2canvas(transcript, getCanvasOptions()).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'transcript.png';
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+            });
+        }
+
+        // Download as JPEG
+        function downloadJPG() {
+            const transcript = document.getElementById('transcript');
+            html2canvas(transcript, getCanvasOptions()).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'transcript.jpg';
+                link.href = canvas.toDataURL('image/jpeg', 1.0);
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
